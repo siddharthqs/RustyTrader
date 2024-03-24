@@ -5,6 +5,7 @@ pub trait Strategy {
     fn sell_signal(&self, price_series: &CandleSticks) -> bool;
     fn close_buy_signal(&self, price_series: &CandleSticks) -> bool;
     fn close_sell_signal(&self, price_series: &CandleSticks) -> bool;
+    fn lookback(&self) -> usize;
 }
 
 #[derive(Debug)]
@@ -27,6 +28,9 @@ impl Strategy for SampleStrategy {
         if len < self.lookback as usize {
             return;
         }
+    }
+    fn lookback(&self) -> usize {
+        90
     }
     fn buy_signal(&self, price_series: &CandleSticks) -> bool {
         let len = price_series.candles.len();

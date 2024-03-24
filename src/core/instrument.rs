@@ -12,7 +12,7 @@ pub trait Instrument {
     fn sell(&mut self);
     fn close_sell(&mut self);
 }
-struct SingleInstrument {
+pub struct SingleInstrument {
     ticker: String,
     win_count: i32,
     loss_count: i32,
@@ -30,7 +30,14 @@ struct SingleInstrument {
     stop_loss_price: f64,
 }
 impl SingleInstrument {
-    fn new(ticker:String,price_series: CandleSticks, config: BackTestConfig, strategy: Box<dyn Strategy>, aggressive: bool) -> SingleInstrument {
+    pub fn total_return(&self) -> f64 {
+        let mut total_return = 0.0;
+        for (_, pnl) in self.profit.iter() {
+            total_return += pnl;
+        }
+        total_return
+    }
+    pub fn new(ticker:String,price_series: CandleSticks, config: BackTestConfig, strategy: Box<dyn Strategy>, aggressive: bool) -> SingleInstrument {
         SingleInstrument {
             ticker: ticker,
             win_count: 0,
@@ -61,15 +68,19 @@ impl SingleInstrument {
     fn stop_loss(&self) -> f64 {
         self.config.stop_loss
     }
-    fn on_bar(&mut self, candle: Candle) {
+    pub fn on_bar(&mut self, candle: Candle) {
         self.price_series.add_candle(candle);
+        let len = self.price_series.candles.len();
+        if len < self.strategy.lookback() {
+            return;
+        }
         let change =  (self.position as f64)*(self.price_series.latest_candle().close - self.price_series.second_latest_candle().close);
         let candle = self.price_series.latest_candle();
         let datetime = candle.clone().date;
         self.profit.push((datetime, change));
         self.strategy.on_bar(&self.price_series);
     }
-    fn on_trade(&mut self, quantity: i32) {
+    pub fn on_trade(&mut self, quantity: i32) {
         let buy_signal = self.strategy.buy_signal(&self.price_series);
         let sell_signal = self.strategy.sell_signal(&self.price_series);
         let close_buy_signal = self.strategy.close_buy_signal(&self.price_series);
@@ -84,7 +95,7 @@ impl SingleInstrument {
         else if self.position > 0 {
             let profit_pct = self.price_series.latest_candle().close / self.buy_price;
             match (buy_signal, close_buy_signal,sell_signal,close_sell_signal) {
-                (true, _,_,_) => println!("Continue Buy signal"),
+                (true, _,_,_) => (),
                 (_, true,false,_) => self.close_buy(),
                 (_,_,true,_) => {self.close_buy();
                     if self.aggressive { self.sell(quantity);}
@@ -100,7 +111,7 @@ impl SingleInstrument {
         else if self.position < 0 {
             let profit_pct = self.sell_price / self.price_series.latest_candle().close;
             match (buy_signal, close_buy_signal,sell_signal,close_sell_signal) {
-                (_, _,true,_) => println!("Continue Sell signal"),
+                (_, _,true,_) => (),
                 (false,_,_,true) => self.close_sell(),
                 (true,_,_,_) => {self.close_sell();
                     if self.aggressive { self.buy(quantity);}
