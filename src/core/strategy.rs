@@ -13,51 +13,54 @@ pub struct SampleStrategy{
     name: String,
     lookback: i32,
 }
-impl SampleStrategy {
-    fn new(name: String, lookback: i32) -> SampleStrategy {
-        SampleStrategy {
-            name,
-            lookback,
-        }
+pub struct SMAStrategy{
+    name: String,
+    lookback: usize,
+    sma: f64,
+    sma_para: usize
+}
+impl SMAStrategy {
+    pub fn new(name: String, lookback: usize,sma_para:usize) -> SMAStrategy {
+        SMAStrategy{ name, lookback, sma: 0.0, sma_para }
     }
 }
-impl Strategy for SampleStrategy {
-
-    fn on_bar(&mut self, price_series: &CandleSticks) {
-        let len = price_series.candles.len();
-        if len < self.lookback as usize {
-            return;
-        }
-    }
+impl Strategy for SMAStrategy {
     fn lookback(&self) -> usize {
-        90
+        self.lookback
     }
-    fn buy_signal(&self, price_series: &CandleSticks) -> bool {
-        let len = price_series.candles.len();
-        if len < self.lookback as usize {
-            return false;
+    fn on_bar(&mut self, ohlc: &CandleSticks) {
+        let len = ohlc.candles.len();
+        let price = &ohlc.candles[len - self.lookback..];
+        self.sma = price[price.len() - self.sma_para..].iter()
+            .map(|x| x.close).sum::<f64>() / self.sma_para as f64;
+    }
+    fn buy_signal(&self, ohlc: &CandleSticks) -> bool {
+        let len = ohlc.candles.len();
+        if ohlc.candles[len - 1].close > self.sma {
+            return true;
         }
         false
     }
-    fn sell_signal(&self, price_series: &CandleSticks) -> bool {
-        let len = price_series.candles.len();
-        if len < self.lookback as usize {
-            return false;
+    fn sell_signal(&self, ohlc: &CandleSticks) -> bool {
+        let len = ohlc.candles.len();
+        if ohlc.candles[len - 1].close < self.sma {
+            return true;
         }
         false
     }
-    fn close_buy_signal(&self, price_series: &CandleSticks) -> bool {
-        let len = price_series.candles.len();
-        if len < self.lookback as usize {
-            return false;
+    fn close_buy_signal(&self, ohlc: &CandleSticks) -> bool {
+        let len = ohlc.candles.len();
+        if ohlc.candles[len - 1].close < self.sma {
+            return true;
         }
         false
     }
-    fn close_sell_signal(&self, price_series: &CandleSticks) -> bool {
-        let len = price_series.candles.len();
-        if len < self.lookback as usize {
-            return false;
+    fn close_sell_signal(&self, ohlc: &CandleSticks) -> bool {
+        let len = ohlc.candles.len();
+        if ohlc.candles[len - 1].close > self.sma {
+            return true;
         }
         false
     }
 }
+

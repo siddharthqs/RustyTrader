@@ -3,7 +3,7 @@ use crate::core::candle::{Candle, CandleSticks};
 use crate::core::instrument::{Instrument, SingleInstrument};
 use csv;
 use crate::core::utils::BackTestConfig;
-use crate::core::strategy::Strategy;
+use crate::core::strategy::{Strategy, SMAStrategy};
 use polars::prelude::*;
 use polars::prelude::CsvReader;
 use std::sync::mpsc;
@@ -54,5 +54,24 @@ impl BackTester {
         producer_handle.join().unwrap();
         println!("{:?}", instrument.total_return());
         return instrument.total_return();
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::strategy::SMAStrategy;
+    use assert_approx_eq::assert_approx_eq;
+    #[test]
+    fn test_back_test() {
+
+        let file = r"./src/tests/CL_5min.txt";
+
+        //let file = r"D:\boltzmann_research\futures\futures_full_5min_con_ADJ\scope\ZC_5min_continuous_adjusted.txt";
+        let back_tester = BackTester{ data_file: file.to_string(), quantity: 1, commission: 0.0008, stop_loss: 0.99, take_profit: 1.03 };
+        let strategy = SMAStrategy::new("SMA 10".to_string(), 30, 10);
+        let pnl = back_tester.run(Box::new(strategy));
+        //let pnl = 0.0;
+        assert_approx_eq!(pnl, -9.56, 1e-2);
+
     }
 }
