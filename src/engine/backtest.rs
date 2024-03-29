@@ -9,7 +9,7 @@ use polars::prelude::CsvReader;
 use std::sync::mpsc;
 use std::thread;
 
-/// date should be in the format of "%Y-%m-%d %H:%M:%S"
+/// date is in the format of "%Y-%m-%d %H:%M:%S"
 fn get_candles_from_csv(tx: mpsc::Sender<Candle>,file: &str) {
     let df = CsvReader::from_path(file).expect("Error Reading CSV").has_header(false)
         .finish();

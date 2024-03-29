@@ -1,3 +1,7 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![codecov](https://codecov.io/gh/siddharthqs/RustyTrader/graph/badge.svg?token=RN0W9GZ9DC)](https://codecov.io/gh/siddharthqs/RustyTrader)
+
+
 # RustyTrader
 RustyTrader is a simple trading backtester written in Rust.
 It uses Instrument struct to iterate over the data and execute the strategy and same infrastructure can be used to
