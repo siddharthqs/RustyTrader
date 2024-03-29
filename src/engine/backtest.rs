@@ -9,8 +9,8 @@ use polars::prelude::CsvReader;
 use std::sync::mpsc;
 use std::thread;
 
+/// date should be in the format of "%Y-%m-%d %H:%M:%S"
 fn get_candles_from_csv(tx: mpsc::Sender<Candle>,file: &str) {
-
     let df = CsvReader::from_path(file).expect("Error Reading CSV").has_header(false)
         .finish();
     let mut df = df.unwrap();
@@ -38,6 +38,13 @@ pub struct BackTester{
     pub take_profit: f64,
 }
 impl BackTester {
+    /// Run the backtest
+    /// # Example
+    /// let file = r"./src/tests/CL_5min.txt";
+    ///  let back_tester = BackTester{ data_file: file.to_string(), quantity: 1, commission: 0.0008, stop_loss: 0.99, take_profit: 1.03 };
+    ///  let strategy = SMAStrategy::new("SMA 10".to_string(), 30, 10);
+    ///  let pnl = back_tester.run(Box::new(strategy));
+    ///  assert_approx_eq!(pnl, -9.56, 1e-2);
     pub fn run( self,strategy: Box<dyn Strategy>) -> f64 {
         let data = self.data_file;
         let (tx, rx) = mpsc::channel();
@@ -65,13 +72,11 @@ mod tests {
     fn test_back_test() {
 
         let file = r"./src/tests/CL_5min.txt";
-
         //let file = r"D:\boltzmann_research\futures\futures_full_5min_con_ADJ\scope\ZC_5min_continuous_adjusted.txt";
         let back_tester = BackTester{ data_file: file.to_string(), quantity: 1, commission: 0.0008, stop_loss: 0.99, take_profit: 1.03 };
         let strategy = SMAStrategy::new("SMA 10".to_string(), 30, 10);
         let pnl = back_tester.run(Box::new(strategy));
-        //let pnl = 0.0;
-        assert_approx_eq!(pnl, -9.56, 1e-2);
+        assert_approx_eq!(pnl, -9.627, 1e-2);
 
     }
 }

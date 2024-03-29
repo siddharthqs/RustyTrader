@@ -22,7 +22,7 @@ pub struct SingleInstrument {
     sell_count: i32,
     position: i32,
     price_series: CandleSticks,
-    profit: Vec<(NaiveDateTime,f64)>,
+    pub profit: Vec<(NaiveDateTime,f64)>,
     quantity_size: i32,
     config: BackTestConfig,
     strategy: Box<dyn Strategy>,
@@ -81,6 +81,10 @@ impl SingleInstrument {
         self.strategy.on_bar(&self.price_series);
     }
     pub fn on_trade(&mut self, quantity: i32) {
+        let len = self.price_series.candles.len();
+        if len < self.strategy.lookback() {
+            return;
+        }
         let buy_signal = self.strategy.buy_signal(&self.price_series);
         let sell_signal = self.strategy.sell_signal(&self.price_series);
         let close_buy_signal = self.strategy.close_buy_signal(&self.price_series);
@@ -172,5 +176,33 @@ impl SingleInstrument {
         self.position = 0;
         self.quantity_size = 0;
         if profit < 0.0 { self.loss_count += 1; } else { self.win_count += 1; }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::strategy::SMAStrategy;
+    use assert_approx_eq::assert_approx_eq;
+
+    #[test]
+    fn test_instrument() {
+        let candle = Candle::new(NaiveDateTime::parse_from_str("2021-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(), 1.0, 2.0, 0.5, 1.5, 100);
+        let mut candle_sticks = CandleSticks::new("5min".to_string());
+        candle_sticks.add_candle(candle);
+        let candle = Candle::new(NaiveDateTime::parse_from_str("2021-01-01 00:05:00", "%Y-%m-%d %H:%M:%S").unwrap(), 1.5, 3.0, 1.0, 2.5, 100);
+        candle_sticks.add_candle(candle);
+        let config = BackTestConfig::new(0.0008, 0.0, 0.99, 1.03);
+        let strategy = SMAStrategy::new("SMA 10".to_string(), 30, 10);
+        let mut instrument = SingleInstrument::new("ZC".to_string(), candle_sticks, config, Box::new(strategy), false);
+        let candle = Candle::new(NaiveDateTime::parse_from_str("2021-01-01 00:10:00", "%Y-%m-%d %H:%M:%S").unwrap(), 2.5, 4.0, 2.0, 3.5, 100);
+        instrument.on_bar(candle);
+        instrument.on_trade(1);
+        assert_eq!(instrument.position, 0);
+        assert_eq!(instrument.buy_count, 0);
+        assert_eq!(instrument.quantity_size, 1);
+        assert_eq!(instrument.profit.len(), 0);
+        assert_eq!(instrument.total_return(), 0.0);
+
     }
 }
